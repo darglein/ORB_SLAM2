@@ -30,7 +30,7 @@
 
 #include <opencv2/opencv.hpp>
 #include <vector>
-
+using namespace std;
 namespace ORB_SLAM2
 {
 #define FRAME_GRID_ROWS 48

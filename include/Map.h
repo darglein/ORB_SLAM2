@@ -26,8 +26,9 @@
 
 #include <mutex>
 #include <set>
+#include <vector>
 
-
+using namespace std;
 
 namespace ORB_SLAM2
 {
