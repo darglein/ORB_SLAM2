@@ -1,38 +1,36 @@
 /**
-* This file is part of ORB-SLAM2.
-*
-* Copyright (C) 2014-2016 Raúl Mur-Artal <raulmur at unizar dot es> (University of Zaragoza)
-* For more information see <https://github.com/raulmur/ORB_SLAM2>
-*
-* ORB-SLAM2 is free software: you can redistribute it and/or modify
-* it under the terms of the GNU General Public License as published by
-* the Free Software Foundation, either version 3 of the License, or
-* (at your option) any later version.
-*
-* ORB-SLAM2 is distributed in the hope that it will be useful,
-* but WITHOUT ANY WARRANTY; without even the implied warranty of
-* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-* GNU General Public License for more details.
-*
-* You should have received a copy of the GNU General Public License
-* along with ORB-SLAM2. If not, see <http://www.gnu.org/licenses/>.
-*/
+ * This file is part of ORB-SLAM2.
+ *
+ * Copyright (C) 2014-2016 Raúl Mur-Artal <raulmur at unizar dot es> (University of Zaragoza)
+ * For more information see <https://github.com/raulmur/ORB_SLAM2>
+ *
+ * ORB-SLAM2 is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * ORB-SLAM2 is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with ORB-SLAM2. If not, see <http://www.gnu.org/licenses/>.
+ */
 
 
-#include<iostream>
-#include<algorithm>
-#include<fstream>
-#include<chrono>
+#include "../../../include/System.h"
+#include "ViewerAR.h"
 
-#include<ros/ros.h>
+#include <algorithm>
+#include <chrono>
+#include <fstream>
+#include <iostream>
+#include <opencv2/core/core.hpp>
+#include <opencv2/imgproc/imgproc.hpp>
+#include <ros/ros.h>
+
 #include <cv_bridge/cv_bridge.h>
-
-#include<opencv2/core/core.hpp>
-#include<opencv2/imgproc/imgproc.hpp>
-
-#include"../../../include/System.h"
-
-#include"ViewerAR.h"
 
 using namespace std;
 
@@ -46,28 +44,28 @@ cv::Mat DistCoef;
 
 class ImageGrabber
 {
-public:
-    ImageGrabber(ORB_SLAM2::System* pSLAM):mpSLAM(pSLAM){}
+   public:
+    ImageGrabber(ORB_SLAM2::System* pSLAM) : mpSLAM(pSLAM) {}
 
     void GrabImage(const sensor_msgs::ImageConstPtr& msg);
 
     ORB_SLAM2::System* mpSLAM;
 };
 
-int main(int argc, char **argv)
+int main(int argc, char** argv)
 {
     ros::init(argc, argv, "Mono");
     ros::start();
 
-    if(argc != 3)
+    if (argc != 3)
     {
-        cerr << endl << "Usage: rosrun ORB_SLAM2 Mono path_to_vocabulary path_to_settings" << endl;        
+        cerr << endl << "Usage: rosrun ORB_SLAM2 Mono path_to_vocabulary path_to_settings" << endl;
         ros::shutdown();
         return 1;
     }
 
     // Create SLAM system. It initializes all system threads and gets ready to process frames.
-    ORB_SLAM2::System SLAM(argv[1],argv[2],ORB_SLAM2::System::MONOCULAR,false);
+    ORB_SLAM2::System SLAM(argv[1], argv[2], ORB_SLAM2::System::MONOCULAR, false);
 
 
     cout << endl << endl;
@@ -87,11 +85,11 @@ int main(int argc, char **argv)
     ImageGrabber igb(&SLAM);
 
     ros::NodeHandle nodeHandler;
-    ros::Subscriber sub = nodeHandler.subscribe("/camera/image_raw", 1, &ImageGrabber::GrabImage,&igb);
+    ros::Subscriber sub = nodeHandler.subscribe("/camera/image_raw", 1, &ImageGrabber::GrabImage, &igb);
 
 
     cv::FileStorage fSettings(argv[2], cv::FileStorage::READ);
-    bRGB = static_cast<bool>((int)fSettings["Camera.RGB"]);
+    bRGB      = static_cast<bool>((int)fSettings["Camera.RGB"]);
     float fps = fSettings["Camera.fps"];
     viewerAR.SetFPS(fps);
 
@@ -100,27 +98,27 @@ int main(int argc, char **argv)
     float cx = fSettings["Camera.cx"];
     float cy = fSettings["Camera.cy"];
 
-    viewerAR.SetCameraCalibration(fx,fy,cx,cy);
+    viewerAR.SetCameraCalibration(fx, fy, cx, cy);
 
-    K = cv::Mat::eye(3,3,CV_32F);
-    K.at<float>(0,0) = fx;
-    K.at<float>(1,1) = fy;
-    K.at<float>(0,2) = cx;
-    K.at<float>(1,2) = cy;
+    K                 = cv::Mat::eye(3, 3, CV_32F);
+    K.at<float>(0, 0) = fx;
+    K.at<float>(1, 1) = fy;
+    K.at<float>(0, 2) = cx;
+    K.at<float>(1, 2) = cy;
 
-    DistCoef = cv::Mat::zeros(4,1,CV_32F);
+    DistCoef              = cv::Mat::zeros(4, 1, CV_32F);
     DistCoef.at<float>(0) = fSettings["Camera.k1"];
     DistCoef.at<float>(1) = fSettings["Camera.k2"];
     DistCoef.at<float>(2) = fSettings["Camera.p1"];
     DistCoef.at<float>(3) = fSettings["Camera.p2"];
-    const float k3 = fSettings["Camera.k3"];
-    if(k3!=0)
+    const float k3        = fSettings["Camera.k3"];
+    if (k3 != 0)
     {
         DistCoef.resize(5);
         DistCoef.at<float>(4) = k3;
     }
 
-    thread tViewer = thread(&ORB_SLAM2::ViewerAR::Run,&viewerAR);
+    thread tViewer = thread(&ORB_SLAM2::ViewerAR::Run, &viewerAR);
 
     ros::spin();
 
@@ -150,20 +148,18 @@ void ImageGrabber::GrabImage(const sensor_msgs::ImageConstPtr& msg)
     }
     cv::Mat im = cv_ptr->image.clone();
     cv::Mat imu;
-    cv::Mat Tcw = mpSLAM->TrackMonocular(cv_ptr->image,cv_ptr->header.stamp.toSec());
-    int state = mpSLAM->GetTrackingState();
+    cv::Mat Tcw                       = mpSLAM->TrackMonocular(cv_ptr->image, cv_ptr->header.stamp.toSec());
+    int state                         = mpSLAM->GetTrackingState();
     vector<ORB_SLAM2::MapPoint*> vMPs = mpSLAM->GetTrackedMapPoints();
-    vector<cv::KeyPoint> vKeys = mpSLAM->GetTrackedKeyPointsUn();
+    vector<cv::KeyPoint> vKeys        = mpSLAM->GetTrackedKeyPointsUn();
 
-    cv::undistort(im,imu,K,DistCoef);
+    cv::undistort(im, imu, K, DistCoef);
 
-    if(bRGB)
-        viewerAR.SetImagePose(imu,Tcw,state,vKeys,vMPs);
+    if (bRGB)
+        viewerAR.SetImagePose(imu, Tcw, state, vKeys, vMPs);
     else
     {
-        cv::cvtColor(imu,imu,CV_RGB2BGR);
-        viewerAR.SetImagePose(imu,Tcw,state,vKeys,vMPs);
-    }    
+        cv::cvtColor(imu, imu, CV_RGB2BGR);
+        viewerAR.SetImagePose(imu, Tcw, state, vKeys, vMPs);
+    }
 }
-
-
